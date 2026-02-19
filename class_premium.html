@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>우리반 스마트 교실 플랫폼</title>
+<style>
+body{
+ margin:0;
+ font-family:'Arial';
+ background:linear-gradient(135deg,#fce4ec,#e3f2fd);
+ text-align:center;
+}
+header{
+ background:white;
+ padding:15px;
+ font-size:24px;
+ font-weight:bold;
+ box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+.card{
+ background:white;
+ border-radius:25px;
+ padding:20px;
+ margin:20px auto;
+ width:85%;
+ box-shadow:0 8px 20px rgba(0,0,0,0.1);
+}
+button{
+ padding:10px 15px;
+ border:none;
+ border-radius:20px;
+ background:#81d4fa;
+ cursor:pointer;
+ font-size:14px;
+}
+button:hover{ background:#4fc3f7; }
+#studentSelect,#main{display:none;}
+.progress{font-size:22px;font-weight:bold;}
+.rankCard{
+ background:#fff3e0;
+ border-radius:20px;
+ padding:15px;
+ margin:10px;
+}
+.confetti{
+ position:fixed;
+ font-size:30px;
+ animation:fall 2s linear forwards;
+}
+@keyframes fall{
+ to{transform:translateY(500px);opacity:0;}
+}
+</style>
+</head>
+<body>
+
+<header>🏫 우리반 스마트 교실 플랫폼</header>
+
+<div id="startScreen" style="margin-top:100px;">
+<div style="font-size:70px;cursor:pointer;" onclick="enter()">✉</div>
+<p>편지를 눌러 입장하세요</p>
+</div>
+
+<div id="studentSelect">
+<h2>학생 선택</h2>
+<div id="students"></div>
+</div>
+
+<div id="main">
+<h2 id="studentName"></h2>
+<h3 id="todayDate"></h3>
+
+<div class="card">
+<button onclick="goWeather()">🌤 서울 날씨 & 미세먼지</button>
+</div>
+
+<div class="card">
+<h3>💬 오늘의 한마디</h3>
+<p id="quote"></p>
+</div>
+
+<div class="card">
+<h3>🎀 오늘의 1인1역</h3>
+<p id="role"></p>
+</div>
+
+<div class="card">
+<h3>🌟 오늘의 미션</h3>
+<div id="missions"></div>
+<div class="progress">오늘 점수 : <span id="score">0</span> 점</div>
+</div>
+
+<div class="card">
+<h3>🏆 한 달 누적 랭킹</h3>
+<div id="ranking"></div>
+</div>
+</div>
+
+<script>
+
+/* 기본 데이터 */
+const students=["김가은","김나은","김다은","김라은","김마은","김바은","김사은","김아은","김자은","김차은","김카은","김타은","김파은","김하은"];
+
+const roles=["칠판지우개 요정","급식 도우미","줄서기 리더","분리수거 지킴이","문단속 요정","불끄기 요정","학습 준비 도우미","손세정제 요정","교실정리 대장","체육도구 도우미","우유 배달부","알림장 도우미","화분 물주기","인사 천사"];
+
+const quotes=["오늘도 최고야!","웃으면 복이 와요 😊","실수는 성장의 씨앗!","도전하는 사람이 멋져요!","친절은 마음의 선물 🎁"];
+
+let today=new Date();
+let todayKey=today.toISOString().slice(0,10);
+let monthKey=today.getFullYear()+"-"+(today.getMonth()+1);
+
+/* 1인1역 랜덤 */
+let shuffledRoles=roles.sort(()=>Math.random()-0.5);
+let roleMap={};
+students.forEach((s,i)=>roleMap[s]=shuffledRoles[i]);
+
+/* 학생 버튼 */
+const studentDiv=document.getElementById("students");
+students.forEach(name=>{
+ let btn=document.createElement("button");
+ btn.innerText=name;
+ btn.onclick=()=>selectStudent(name);
+ studentDiv.appendChild(btn);
+});
+
+function enter(){
+ document.getElementById("startScreen").style.display="none";
+ document.getElementById("studentSelect").style.display="block";
+}
+
+function selectStudent(name){
+ document.getElementById("studentSelect").style.display="none";
+ document.getElementById("main").style.display="block";
+
+ document.getElementById("studentName").innerText=name+" 학생";
+ document.getElementById("todayDate").innerText=todayKey;
+ document.getElementById("role").innerText=roleMap[name];
+ document.getElementById("quote").innerText=quotes[Math.floor(Math.random()*quotes.length)];
+
+ resetIfNewDay(name);
+ createMissions(name);
+ updateRanking();
+}
+
+/* 날짜 바뀌면 리셋 */
+function resetIfNewDay(name){
+ let savedDate=localStorage.getItem("date_"+name);
+ if(savedDate!==todayKey){
+   localStorage.setItem("today_"+name,0);
+   localStorage.setItem("date_"+name,todayKey);
+ }
+}
+
+/* 월 바뀌면 월점수 초기화 */
+function resetIfNewMonth(){
+ let savedMonth=localStorage.getItem("month_date");
+ if(savedMonth!==monthKey){
+   students.forEach(s=>localStorage.setItem("month_"+s,0));
+   localStorage.setItem("month_date",monthKey);
+ }
+}
+resetIfNewMonth();
+
+/* 미션 */
+function createMissions(name){
+ const missions=["가방 정리","독서 10분","친구에게 인사","발표하기","급식 남기지 않기"];
+ const missionDiv=document.getElementById("missions");
+ missionDiv.innerHTML="";
+ let score=parseInt(localStorage.getItem("today_"+name))||0;
+ document.getElementById("score").innerText=score;
+
+ missions.forEach(m=>{
+  let cb=document.createElement("input");
+  cb.type="checkbox";
+  cb.onchange=function(){
+   if(this.checked){score+=20;} else{score-=20;}
+   document.getElementById("score").innerText=score;
+   localStorage.setItem("today_"+name,score);
+
+   let monthScore=parseInt(localStorage.getItem("month_"+name))||0;
+   localStorage.setItem("month_"+name,monthScore+ (this.checked?20:-20));
+
+   if(score>=100){celebrate();}
+   updateRanking();
+  };
+  missionDiv.appendChild(cb);
+  missionDiv.append(" "+m);
+  missionDiv.appendChild(document.createElement("br"));
+ });
+}
+
+/* 폭죽 */
+function celebrate(){
+ for(let i=0;i<20;i++){
+   let conf=document.createElement("div");
+   conf.className="confetti";
+   conf.innerText="🎉";
+   conf.style.left=Math.random()*100+"%";
+   document.body.appendChild(conf);
+   setTimeout(()=>conf.remove(),2000);
+ }
+}
+
+/* 랭킹 */
+function updateRanking(){
+ let arr=students.map(s=>({
+   name:s,
+   score:parseInt(localStorage.getItem("month_"+s))||0
+ }));
+ arr.sort((a,b)=>b.score-a.score);
+ let html="";
+ arr.forEach((s,i)=>{
+   html+=`<div class='rankCard'>${i+1}등 - ${s.name} : ${s.score}점</div>`;
+ });
+ document.getElementById("ranking").innerHTML=html;
+}
+
+/* 날씨 버튼 */
+function goWeather(){
+ window.open("https://search.naver.com/search.naver?query=서울+오늘+날씨+미세먼지");
+}
+
+</script>
+</body>
+</html>
